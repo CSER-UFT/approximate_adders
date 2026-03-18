@@ -1,7 +1,0 @@
-Running: xsim.dir/sim_adder_16bit_behav/xsimk.exe -simmode gui -wdb sim_adder_16bit_behav.wdb -simrunnum 0 -socket 20549
-Design successfully loaded
-Design Loading Memory Usage: 8464 KB (Peak: 8464 KB)
-Design Loading CPU Usage: 61 ms
-Simulation completed
-Simulation Memory Usage: 15096 KB (Peak: 15096 KB)
-Simulation CPU Usage: 343 ms
