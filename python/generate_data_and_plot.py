@@ -12,8 +12,8 @@ N_16 = 50_000   # tamanho da entrada 16 bits
 N_32 = 100_000  # tamanho da entrada 32 bits
 
 # probabilidade de mudança de valor entre vetores consecutivos
-CHANGE_PROB_16 = 0.2   # menos mudanças → reduz pico de energia
-CHANGE_PROB_32 = 0.3
+CHANGE_PROB_16 = 0.5   
+CHANGE_PROB_32 = 0.5
 
 OUTPUT_DIR = "./data"
 PLOT_DIR = "./plots"

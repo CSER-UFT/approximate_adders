@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
 -----------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2022.1 (lin64) Build 3526262 Mon Apr 18 15:47:01 MDT 2022
-| Date             : Tue Mar 17 18:53:28 2026
+| Date             : Wed Mar 18 12:21:39 2026
 | Host             : krust running 64-bit Ubuntu 20.04.4 LTS
 | Command          : report_power -file /home/tiago/energetic_efficiency/results/sim_cla_16bit_exponential_power.rpt
 | Design           : cla_16bit
@@ -30,14 +30,14 @@ Table of Contents
 ----------
 
 +--------------------------+------------------------------------------------------------------------+
-| Total On-Chip Power (W)  | 5.024                                                                  |
+| Total On-Chip Power (W)  | 0.082                                                                  |
 | Design Power Budget (W)  | Unspecified*                                                           |
 | Power Budget Margin (W)  | NA                                                                     |
-| Dynamic (W)              | 4.936                                                                  |
-| Device Static (W)        | 0.088                                                                  |
+| Dynamic (W)              | 0.012                                                                  |
+| Device Static (W)        | 0.070                                                                  |
 | Effective TJA (C/W)      | 4.9                                                                    |
-| Max Ambient (C)          | 60.2                                                                   |
-| Junction Temperature (C) | 49.8                                                                   |
+| Max Ambient (C)          | 84.6                                                                   |
+| Junction Temperature (C) | 25.4                                                                   |
 | Confidence Level         | Medium                                                                 |
 | Setting File             | ---                                                                    |
 | Simulation Activity File | /home/tiago/energetic_efficiency/results/sim_cla_16bit_exponential.vcd |
@@ -53,12 +53,12 @@ Table of Contents
 | On-Chip        | Power (W) | Used     | Available | Utilization (%) |
 +----------------+-----------+----------+-----------+-----------------+
 | Clocks         |     0.000 |        3 |       --- |             --- |
-| Slice Logic    |     0.010 |       46 |       --- |             --- |
-|   LUT as Logic |     0.010 |       34 |     32600 |            0.10 |
-| Signals        |     0.021 |       79 |       --- |             --- |
-| I/O            |     4.904 |       50 |       210 |           23.81 |
-| Static Power   |     0.088 |          |           |                 |
-| Total          |     5.024 |          |           |                 |
+| Slice Logic    |    <0.001 |       46 |       --- |             --- |
+|   LUT as Logic |    <0.001 |       34 |     32600 |            0.10 |
+| Signals        |    <0.001 |       79 |       --- |             --- |
+| I/O            |     0.011 |       50 |       210 |           23.81 |
+| Static Power   |     0.070 |          |           |                 |
+| Total          |     0.082 |          |           |                 |
 +----------------+-----------+----------+-----------+-----------------+
 
 
@@ -68,11 +68,11 @@ Table of Contents
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
 | Source    | Voltage (V) | Total (A) | Dynamic (A) | Static (A) | Powerup (A) | Budget (A)  | Margin (A) |
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
-| Vccint    |       1.000 |     0.067 |       0.042 |      0.025 |       NA    | Unspecified | NA         |
-| Vccaux    |       1.800 |     0.415 |       0.401 |      0.014 |       NA    | Unspecified | NA         |
+| Vccint    |       1.000 |     0.011 |       0.001 |      0.010 |       NA    | Unspecified | NA         |
+| Vccaux    |       1.800 |     0.013 |       0.001 |      0.013 |       NA    | Unspecified | NA         |
 | Vcco33    |       3.300 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | Vcco25    |       2.500 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
-| Vcco18    |       1.800 |     2.319 |       2.318 |      0.001 |       NA    | Unspecified | NA         |
+| Vcco18    |       1.800 |     0.006 |       0.005 |      0.001 |       NA    | Unspecified | NA         |
 | Vcco15    |       1.500 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | Vcco135   |       1.350 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | Vcco12    |       1.200 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
@@ -133,7 +133,7 @@ Table of Contents
 +-----------+-----------+
 | Name      | Power (W) |
 +-----------+-----------+
-| cla_16bit |     4.936 |
+| cla_16bit |     0.012 |
 +-----------+-----------+
 
 

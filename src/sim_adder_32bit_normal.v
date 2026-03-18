@@ -12,10 +12,6 @@ module sim_adder_32bit_normal;
     integer out_file;
     integer r;
     
-    // Clock 100 MHz
-    reg clk = 0;
-    always #5 clk = ~clk;  // período = 10 ns
-
     adder_32bit dut (
         .a(a),
         .b(b),
@@ -48,13 +44,18 @@ module sim_adder_32bit_normal;
         // fixa o carry-in
         cin = 0;
 
-        // lê e aplica vetores na borda do clock
+        // Processamento Sequencial Sem Clock Rápido
         while (!$feof(in_file)) begin
-            @(posedge clk) begin
-                r = $fscanf(in_file, "%h %h\n", a, b);
-                $fwrite(out_file, "%h %h %b %h %b\n", a, b, cin, sum, cout);
-            end
-        end 
+            // 1. Lê os dados do arquivo
+            r = $fscanf(in_file, "%h %h\n", a, b);
+            
+            // 2. Aguarda um tempo para a lógica combinacional estabilizar
+            // 10ns é mais que suficiente para um RCA de 16 bits na Spartan-7
+            #10; 
+            
+            // 3. Grava a entrada E a saída resultante na mesma linha
+            $fwrite(out_file, "%h %h %b %h %b\n", a, b, cin, sum, cout);
+        end
 
         $fclose(in_file);
         $fclose(out_file);
