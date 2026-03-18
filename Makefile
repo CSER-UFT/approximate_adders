@@ -14,13 +14,13 @@ RUN_TCL = $(TCL_DIR)/sim.tcl
 
 # Lista de experimentos (testbenches)
 EXPERIMENTS = \
-	sim_adder_8bit \
-	sim_adder_16bit_exponential \
-	sim_adder_16bit_normal \
-	sim_adder_16bit_uniform \
-	sim_adder_32bit_exponential \
-	sim_adder_32bit_normal \
-	sim_adder_32bit_uniform \
+	sim_rca_8bit \
+	sim_rca_16bit_exponential \
+	sim_rca_16bit_normal \
+	sim_rca_16bit_uniform \
+	sim_rca_32bit_exponential \
+	sim_rca_32bit_normal \
+	sim_rca_32bit_uniform \
 	sim_cla_8bit \
 	sim_cla_16bit_exponential \
 	sim_cla_16bit_normal \
@@ -37,7 +37,7 @@ EXPERIMENTS = \
 all: $(RESULTS_DIR) $(EXPERIMENTS)
 
 # Executa um experimento específico:
-# make run TB=sim_adder_16bit_uniform
+# make run TB=sim_rca_16bit_uniform
 run:
 	@if [ -z "$(TB)" ]; then \
 		echo "Uso: make run TB=<nome_do_testbench>"; \

@@ -19,25 +19,25 @@ os.makedirs(PLOT_DIR, exist_ok=True)
 def classify(exp_name):
     """
     Extrai:
-    - tipo: adder / cla
+    - tipo: rca / cla
     - bits: 8 / 16 / 32
     """
-    tipo = "adder" if "adder" in exp_name else "cla"
+    tipo = "rca" if "rca" in exp_name else "cla"
     bits_match = re.search(r"(\d+)bit", exp_name)
     bits = int(bits_match.group(1)) if bits_match else 0
     return tipo, bits
 
 def plot_bar(data_dict, metric_key, y_label, title, filename):
-    """Gera gráfico de barras comparando adder e cla por largura de bit"""
+    """Gera gráfico de barras comparando rca e cla por largura de bit"""
     plt.figure()
     bit_sizes = sorted({b for t in data_dict for b in data_dict[t]})
     x = range(len(bit_sizes))
     width = 0.35
 
-    adder_vals = [data_dict["adder"].get(b, {}).get(metric_key, 0) for b in bit_sizes]
+    rca_vals = [data_dict["rca"].get(b, {}).get(metric_key, 0) for b in bit_sizes]
     cla_vals   = [data_dict["cla"].get(b, {}).get(metric_key, 0) for b in bit_sizes]
 
-    plt.bar([i - width/2 for i in x], adder_vals, width=width, label="Adder")
+    plt.bar([i - width/2 for i in x], rca_vals, width=width, label="RCA")
     plt.bar([i + width/2 for i in x], cla_vals, width=width, label="CLA")
 
     plt.xticks(x, [f"{b}-bit" for b in bit_sizes])

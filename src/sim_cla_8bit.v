@@ -14,7 +14,7 @@ module sim_cla_8bit;
     integer r;
     
     // DUT
-    adder_8bit dut (
+    cla_8bit dut (
         .a(a),
         .b(b),
         .cin(cin),
