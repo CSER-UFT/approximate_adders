@@ -34,7 +34,7 @@ module sim_cla_16bit_normal;
             $finish;
         end
         if(out_file == 0) begin
-            $display("Erro ao abrir arquivo de saída: %s", output_file);
+//             $display("Erro ao abrir arquivo de saída: %s", output_file);
             $finish;
         end
 
@@ -54,7 +54,7 @@ module sim_cla_16bit_normal;
             
             // 3. Grava a entrada E a saída resultante na mesma linha
             $fwrite(out_file, "%h %h %b %h %b\n", a, b, cin, sum, cout);
-        end 
+        end
 
         $fclose(in_file);
         $fclose(out_file);
