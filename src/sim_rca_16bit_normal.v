@@ -21,8 +21,8 @@ module sim_rca_16bit_normal;
     );
 
         // Caminhos de arquivo de entrada e saída
-    reg [1023:0] input_file  = "/home/tiago/energetic_efficiency/data/16_normal.txt";
-    reg [1023:0] output_file = "/home/tiago/energetic_efficiency/results/rca_16bit_normal.txt";
+    reg [1023:0] input_file  = "./data/16_normal.txt";
+    reg [1023:0] output_file = "./results/rca_16bit_normal.txt";
 //     
     initial begin
         // Abre arquivos

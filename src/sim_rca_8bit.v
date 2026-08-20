@@ -23,8 +23,8 @@ module sim_rca_8bit;
     );
 
     // Caminhos de arquivo de entrada e saída
-    reg [1023:0] input_file  = "/home/tiago/energetic_efficiency/data/8bit_all.txt";
-    reg [1023:0] output_file = "/home/tiago/energetic_efficiency/results/rca_8bit_results.txt";
+    reg [1023:0] input_file  = "./data/8bit_all.txt";
+    reg [1023:0] output_file = "./results/rca_8bit_results.txt";
     
     initial begin
         // Abre arquivos
