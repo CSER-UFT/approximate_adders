@@ -20,11 +20,16 @@ module sim_rca_16bit_uniform;
         .cout(cout)
     );
 
-        // Caminhos de arquivo de entrada e saída
-    reg [1023:0] input_file  = "./data/16_uniform.txt";
-    reg [1023:0] output_file = "./results/rca_16bit_uniform.txt";
-//     
+    // Caminhos de arquivo de entrada e saída
+    reg [4095:0] input_file;
+    reg [4095:0] output_file;
+    
     initial begin
+        if (!$value$plusargs("INPUT=%s", input_file))
+            input_file = "./data/16_uniform.txt";
+        if (!$value$plusargs("OUTPUT=%s", output_file))
+            output_file = "./results/rca_16bit_uniform.txt";
+
         // Abre arquivos
         in_file  = $fopen(input_file, "r");
         out_file = $fopen(output_file, "w");

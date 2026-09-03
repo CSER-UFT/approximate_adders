@@ -22,25 +22,20 @@ module sim_rca_8bit;
         .cout(cout)
     );
 
-    // Caminhos de arquivo de entrada e saída
-    reg [1023:0] input_file  = "./data/8bit_all.txt";
-    reg [1023:0] output_file = "./results/rca_8bit_results.txt";
-    
     initial begin
-        // Abre arquivos
-        in_file  = $fopen(input_file, "r");
-        out_file = $fopen(output_file, "w");
+        in_file  = $fopen("./data/8bit_all.txt", "r");
+        out_file = $fopen("./results/rca_8bit.txt", "w");
 
         if(in_file == 0) begin
-            $display("Erro ao abrir arquivo de entrada: %s", input_file);
+            $display("Erro ao abrir arquivo de entrada: ./data/8bit_all.txt");
             $finish;
         end
         if(out_file == 0) begin
-            $display("Erro ao abrir arquivo de saída: %s", output_file);
+            $display("Erro ao abrir arquivo de saída: ./results/rca_8bit.txt");
             $finish;
         end
 
-        $display("Simulação iniciada: %s -> %s", input_file, output_file);
+        $display("Simulação iniciada: ./data/8bit_all.txt -> ./results/rca_8bit.txt");
 
         // fixa o carry-in
         cin = 0;

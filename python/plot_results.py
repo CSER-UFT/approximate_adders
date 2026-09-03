@@ -15,7 +15,7 @@ os.makedirs(PLOT_DIR, exist_ok=True)
 
 # Lista de tipos que você deseja QUE APAREÇAM no gráfico
 # Se remover um item daqui, ele será ignorado no processamento
-TYPES = ["rca", "cla", "cska", "csla", "csa", "ksa"]
+TYPES = ["rca", "loa", "heaa", "hoeraa", "herloa"]
 
 # =========================================================
 # Funções auxiliares

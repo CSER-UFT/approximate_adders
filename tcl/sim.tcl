@@ -25,6 +25,7 @@ set RESULTS_DIR "$ROOT_DIR/results"
 set BUILD_DIR   "$ROOT_DIR/build/$TB_NAME"
 
 file mkdir $RESULTS_DIR
+catch { exec rm -rf $BUILD_DIR }
 file mkdir $BUILD_DIR
 
 # ==============================
@@ -55,6 +56,8 @@ set DESIGN_TOP "[lindex $parts 0]_[lindex $parts 1]"
 
 set_property top $DESIGN_TOP [get_filesets sources_1]
 set_property top $TB_NAME    [get_filesets sim_1]
+catch { exec ln -sfn "$ROOT_DIR/data" "$BUILD_DIR/data" }
+catch { exec ln -sfn "$RESULTS_DIR" "$BUILD_DIR/results" }
 
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
@@ -84,6 +87,11 @@ report_timing_summary -file "$RESULTS_DIR/${TB_NAME}_timing.rpt"
 # ==============================
 set VCD_FILE "$RESULTS_DIR/${TB_NAME}.vcd"
 
+set SIM_BEHAV_DIR "$BUILD_DIR/${PROJECT_NAME}.sim/sim_1/behav/xsim"
+file mkdir $SIM_BEHAV_DIR
+catch { exec ln -sfn "$ROOT_DIR/data" "$SIM_BEHAV_DIR/data" }
+catch { exec ln -sfn "$RESULTS_DIR" "$SIM_BEHAV_DIR/results" }
+
 launch_simulation
 restart
 
@@ -94,7 +102,6 @@ log_vcd [get_objects /$TB_NAME/*]
 run all
 
 close_vcd
-close_sim
 
 puts ">>> VCD gerado: $VCD_FILE"
 
@@ -115,4 +122,5 @@ puts ">>> Power gerado"
 # ==============================
 puts "=== FINALIZADO: $TB_NAME ==="
 
+catch { close_project }
 exit
