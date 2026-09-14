@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 
-module sim_heaa_16bit_normal;
+module sim_heaa_16bit_normal #(
+    parameter K = 8
+);
 
     reg  [15:0] a, b;
     reg cin;
@@ -11,7 +13,7 @@ module sim_heaa_16bit_normal;
     integer out_file;
     integer r;
     
-    heaa_16bit DUT (
+    heaa_16bit #(.K(K)) dut (
         .a(a),
         .b(b),
         .cin(cin),
@@ -25,8 +27,14 @@ module sim_heaa_16bit_normal;
     initial begin
         if (!$value$plusargs("INPUT=%s", input_file))
             input_file = "./data/16_normal.txt";
-        if (!$value$plusargs("OUTPUT=%s", output_file))
-            output_file = "./results/heaa_16bit_normal.txt";
+        if (!$value$plusargs("OUTPUT=%s", output_file)) begin
+            if (K == 4)
+                output_file = "./sim_output/16bit/k4/heaa_16bit_normal.txt";
+            else if (K == 12)
+                output_file = "./sim_output/16bit/k12/heaa_16bit_normal.txt";
+            else
+                output_file = "./sim_output/16bit/k8/heaa_16bit_normal.txt";
+        end
 
         in_file  = $fopen(input_file, "r");
         out_file = $fopen(output_file, "w");
@@ -40,7 +48,7 @@ module sim_heaa_16bit_normal;
             $finish;
         end
 
-        $display("Simulacao iniciada: %s -> %s", input_file, output_file);
+        $display("Simulacao iniciada (K=%0d): %s -> %s", K, input_file, output_file);
 
         cin = 0;
 
@@ -53,7 +61,7 @@ module sim_heaa_16bit_normal;
         $fclose(in_file);
         $fclose(out_file);
 
-        $display("Simulacao concluida.");
+        $display("Simulacao concluida (K=%0d).", K);
         $finish;
     end
 
