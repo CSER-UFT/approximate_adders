@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
 --------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2022.2 (lin64) Build 3671981 Fri Oct 14 04:59:54 MDT 2022
-| Date         : Fri Sep 11 16:03:05 2026
+| Date         : Fri Sep 25 11:29:37 2026
 | Host         : sarue running 64-bit Ubuntu 20.04.6 LTS
 | Command      : report_utilization -file /home/pablo.brito/approximate_adder/vivado_reports/16bit/k4/sim_hoeraa_16bit_uniform_resource.rpt
 | Design       : hoeraa_16bit

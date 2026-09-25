@@ -138,7 +138,7 @@ def evaluate_all_results(
         processed_files.append(rca_8bit_file)
 
     # 1. Somadores de 8 bits (Varredura de K em [2, 4, 6])
-    for k in [2, 4, 6]:
+    for k in [1, 2, 3]:
         for arch in architectures:
             approx_8bit_file = None
             for sdir in sim_dirs:
@@ -183,7 +183,7 @@ def evaluate_all_results(
             })
 
     # 2. Somadores de 16 bits (Varredura de K em [4, 8, 12] x 3 Distribuicoes)
-    k_16_list = [4, 8, 12]
+    k_16_list = [2, 3, 4, 5, 6]
     for dist in distributions:
         rca_16_file = None
         for sdir in sim_dirs:
@@ -248,52 +248,70 @@ def evaluate_all_results(
                     **metrics
                 })
 
-    # 3. Somadores de 32 bits (Distribuicoes estatisticas)
+    k_32_list = [4, 6, 8, 10]
     for dist in distributions:
-        rca_file = find_file(f"rca_32bit_{dist}.txt", sim_dirs)
+        rca_32_file = None
+        for sdir in sim_dirs:
+            cands = [
+                os.path.join(sdir, "32bit", "k0", f"rca_32bit_{dist}.txt"),
+                os.path.join(sdir, f"rca_32bit_{dist}.txt"),
+            ]
+            for c in cands:
+                if c and os.path.exists(c):
+                    rca_32_file = c
+                    break
+            if rca_32_file:
+                break
+
         rca_data = None
-
-        if rca_file and os.path.exists(rca_file):
-            rca_in, rca_exact, rca_circ = parse_result_file(rca_file, 32)
-            validate_rca(rca_file, 32, rca_in, rca_exact, rca_circ)
+        if rca_32_file and os.path.exists(rca_32_file):
+            rca_in, rca_exact, rca_circ = parse_result_file(rca_32_file, 32)
+            validate_rca(rca_32_file, 32, rca_in, rca_exact, rca_circ)
             rca_data = (rca_in, rca_circ)
-            validated_rcas.add(os.path.basename(rca_file))
-            processed_files.append(rca_file)
+            validated_rcas.add(f"32bit/{os.path.basename(rca_32_file)}")
+            processed_files.append(rca_32_file)
 
-        for arch in architectures:
-            approx_file = find_file(f"{arch}_32bit_{dist}.txt", sim_dirs)
+        for k in k_32_list:
+            for arch in architectures:
+                approx_32_file = None
+                for sdir in sim_dirs:
+                    cands = [
+                        os.path.join(sdir, "32bit", f"k{k}", f"{arch}_32bit_{dist}.txt"),
+                        os.path.join(sdir, f"{arch}_32bit_k{k}_{dist}.txt"),
+                        os.path.join(sdir, f"{arch}_32bit_{dist}.txt") if k == 16 else None
+                    ]
+                    for c in cands:
+                        if c and os.path.exists(c):
+                            approx_32_file = c
+                            break
+                    if approx_32_file:
+                        break
 
-            if not approx_file or not os.path.exists(approx_file):
-                continue
+                if not approx_32_file:
+                    continue
 
-            app_in, app_exact, app_circ = parse_result_file(approx_file, 32)
-            processed_files.append(approx_file)
+                app_in, app_exact, app_circ = parse_result_file(approx_32_file, 32)
+                processed_files.append(approx_32_file)
 
-            if rca_data is not None:
-                rca_in, rca_circ = rca_data
-                validate_input_alignment(rca_file, approx_file, rca_in, app_in)
-                aligned_pairs.append((os.path.basename(rca_file), os.path.basename(approx_file)))
-                exact_vals = rca_circ
-            else:
-                warnings_list.append(f"AVISO: arquivo RCA não encontrado ({rca_file}); usando soma exata calculada como referência.")
-                exact_vals = app_exact
+                if rca_data is not None:
+                    rca_in, rca_circ = rca_data
+                    validate_input_alignment(rca_32_file, approx_32_file, rca_in, app_in)
+                    aligned_pairs.append((f"32bit/{os.path.basename(rca_32_file)}", f"32bit/k{k}/{os.path.basename(approx_32_file)}"))
+                    exact_vals = rca_circ
+                else:
+                    warnings_list.append(f"AVISO: arquivo RCA não encontrado ({rca_32_file}); usando soma exata calculada como referência.")
+                    exact_vals = app_exact
 
-            k_val = 16
-            k_match = re.search(r"k(\d+)", approx_file)
-            if k_match:
-                k_val = int(k_match.group(1))
-
-            canonical_exp = f"{arch}_32bit_k{k_val}_{dist}"
-
-            metrics = compute_error_metrics(exact_vals, app_circ)
-            records.append({
-                "experiment": canonical_exp,
-                "architecture": arch.upper(),
-                "bits": 32,
-                "k_bits": k_val,
-                "distribution": dist,
-                **metrics
-            })
+                canonical_exp = f"{arch}_32bit_k{k}_{dist}"
+                metrics = compute_error_metrics(exact_vals, app_circ)
+                records.append({
+                    "experiment": canonical_exp,
+                    "architecture": arch.upper(),
+                    "bits": 32,
+                    "k_bits": k,
+                    "distribution": dist,
+                    **metrics
+                })
 
     if records:
         os.makedirs(os.path.dirname(output_csv), exist_ok=True)

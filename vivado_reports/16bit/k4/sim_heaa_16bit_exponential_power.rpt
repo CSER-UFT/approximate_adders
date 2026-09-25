@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
 -------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2022.2 (lin64) Build 3671981 Fri Oct 14 04:59:54 MDT 2022
-| Date             : Fri Sep 11 15:59:55 2026
+| Date             : Fri Sep 25 11:26:27 2026
 | Host             : sarue running 64-bit Ubuntu 20.04.6 LTS
 | Command          : report_power -file /home/pablo.brito/approximate_adder/vivado_reports/16bit/k4/sim_heaa_16bit_exponential_power.rpt
 | Design           : heaa_16bit

@@ -463,7 +463,7 @@ def main():
 
     # 4. Graficos Dedicados de DSE de 8 Bits (Variação de K: 2, 4, 6)
     if dse_err_8:
-        print("\n--- Gerando suite DSE para 8-bit (K=2, 4, 6) ---")
+        print("\n--- Gerando suite DSE para 8-bit (K=1, 2, 3) ---")
         plot_dse_bars(dse_err_8, APPROX_TYPES, "mae", "MAE", "MAE vs. K (8-bit Adders)", "dse_8bit_mae")
         plot_dse_bars(dse_err_8, APPROX_TYPES, "mse", "MSE", "MSE vs. K (8-bit Adders)", "dse_8bit_mse", yscale="log")
         plot_dse_bars(dse_err_8, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability vs. K (8-bit)", "dse_8bit_ep")
@@ -484,7 +484,7 @@ def main():
     # 5. Graficos Dedicados de DSE de 16 Bits (Variação de K: 4, 8, 12 - ativado quando múltiplos K estiverem disponíveis)
     has_16bit_dse = any(len(dse_err_16[arch]) > 1 for arch in dse_err_16)
     if has_16bit_dse:
-        print("\n--- Gerando suite DSE para 16-bit (K=4, 8, 12) ---")
+        print("\n--- Gerando suite DSE para 16-bit (K=2, 3, 4, 5, 6) ---")
         plot_dse_bars(dse_err_16, APPROX_TYPES, "mae", "MAE", "MAE vs. K (16-bit Adders)", "dse_16bit_mae")
         plot_dse_bars(dse_err_16, APPROX_TYPES, "mse", "MSE", "MSE vs. K (16-bit Adders)", "dse_16bit_mse", yscale="log")
         plot_dse_bars(dse_err_16, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability vs. K (16-bit)", "dse_16bit_ep")
@@ -499,8 +499,30 @@ def main():
             plot_dse_lines(dse_hw_16, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (16-bit Spartan-7)", "dse_16bit_lut_curve")
             plot_dse_bars(dse_hw_16, TYPES, "dynamic", "Dynamic Power (W)", "Dynamic Power vs. K (16-bit)", "dse_16bit_power_dyn")
 
+
         if dse_hw_16 and dse_err_16:
             plot_dse_tradeoff(dse_hw_16, dse_err_16, bits=16, filename_base="dse_16bit_tradeoff_power_mae")
+
+    dse_hw_32, dse_err_32 = load_dse_data(32)
+    if dse_err_32:
+        print("\n--- Gerando suite DSE para 32-bit (K=4, 6, 8, 10) ---")
+        plot_dse_bars(dse_err_32, APPROX_TYPES, "mae", "MAE", "MAE vs. K (32-bit Uniforme)", "dse_32bit_mae")
+        plot_dse_bars(dse_err_32, APPROX_TYPES, "mse", "MSE (log)", "MSE vs. K (32-bit Uniforme)", "dse_32bit_mse")
+        plot_dse_bars(dse_err_32, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability vs. K (32-bit)", "dse_32bit_ep")
+        plot_dse_bars(dse_err_32, APPROX_TYPES, "mre", "MRE (%)", "Mean Relative Error vs. K (32-bit)", "dse_32bit_mre")
+
+        plot_dse_lines(dse_err_32, APPROX_TYPES, "mae", "MAE", "MAE Progression with K (32-bit)", "dse_32bit_mae_curve")
+        plot_dse_lines(dse_err_32, APPROX_TYPES, "mse", "MSE (log scale)", "MSE Progression with K (32-bit)", "dse_32bit_mse_curve", yscale="log")
+        plot_dse_lines(dse_err_32, APPROX_TYPES, "ep", "Error Probability (%)", "EP Progression with K (32-bit)", "dse_32bit_ep_curve")
+
+        if dse_hw_32:
+            plot_dse_bars(dse_hw_32, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (32-bit Spartan-7)", "dse_32bit_lut")
+            plot_dse_lines(dse_hw_32, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (32-bit Spartan-7)", "dse_32bit_lut_curve")
+            plot_dse_bars(dse_hw_32, TYPES, "dynamic", "Dynamic Power (W)", "Dynamic Power vs. K (32-bit)", "dse_32bit_power_dyn")
+
+        if dse_hw_32 and dse_err_32:
+            plot_dse_tradeoff(dse_hw_32, dse_err_32, bits=32, filename_base="dse_32bit_tradeoff_power_mae")
+
 
     print(f"\n[SUCESSO] Todos os graficos (Macro + DSE) foram salvos em: {os.path.abspath(PLOT_DIR)}")
 

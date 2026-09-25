@@ -27,14 +27,8 @@ module sim_loa_16bit_exponential #(
     initial begin
         if (!$value$plusargs("INPUT=%s", input_file))
             input_file = "./data/16_exponential.txt";
-        if (!$value$plusargs("OUTPUT=%s", output_file)) begin
-            if (K == 4)
-                output_file = "./sim_output/16bit/k4/loa_16bit_exponential.txt";
-            else if (K == 12)
-                output_file = "./sim_output/16bit/k12/loa_16bit_exponential.txt";
-            else
-                output_file = "./sim_output/16bit/k8/loa_16bit_exponential.txt";
-        end
+        if (!$value$plusargs("OUTPUT=%s", output_file))
+            $sformat(output_file, "./sim_output/16bit/k%0d/loa_16bit_exponential.txt", K);
 
         in_file  = $fopen(input_file, "r");
         out_file = $fopen(output_file, "w");

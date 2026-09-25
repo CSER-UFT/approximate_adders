@@ -2,6 +2,8 @@
 
 module sim_loa_32bit_exponential;
 
+    parameter K = 16;
+
     reg  [31:0] a, b;
     reg cin;
     wire [31:0] sum;
@@ -11,7 +13,9 @@ module sim_loa_32bit_exponential;
     integer out_file;
     integer r;
     
-    loa_32bit DUT (
+    loa_32bit #(
+        .K(K)
+    ) DUT (
         .a(a),
         .b(b),
         .cin(cin),
@@ -25,8 +29,9 @@ module sim_loa_32bit_exponential;
     initial begin
         if (!$value$plusargs("INPUT=%s", input_file))
             input_file = "./data/32_exponential.txt";
+        
         if (!$value$plusargs("OUTPUT=%s", output_file))
-            output_file = "./results/loa_32bit_exponential.txt";
+            $sformat(output_file, "./sim_output/32bit/k%0d/loa_32bit_exponential.txt", K);
 
         in_file  = $fopen(input_file, "r");
         out_file = $fopen(output_file, "w");

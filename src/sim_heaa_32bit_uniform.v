@@ -2,6 +2,8 @@
 
 module sim_heaa_32bit_uniform;
 
+    parameter K = 16;
+
     reg  [31:0] a, b;
     reg cin;
     wire [31:0] sum;
@@ -11,7 +13,9 @@ module sim_heaa_32bit_uniform;
     integer out_file;
     integer r;
     
-    heaa_32bit DUT (
+    heaa_32bit #(
+        .K(K)
+    ) DUT (
         .a(a),
         .b(b),
         .cin(cin),
@@ -25,8 +29,9 @@ module sim_heaa_32bit_uniform;
     initial begin
         if (!$value$plusargs("INPUT=%s", input_file))
             input_file = "./data/32_uniform.txt";
+        
         if (!$value$plusargs("OUTPUT=%s", output_file))
-            output_file = "./results/heaa_32bit_uniform.txt";
+            $sformat(output_file, "./sim_output/32bit/k%0d/heaa_32bit_uniform.txt", K);
 
         in_file  = $fopen(input_file, "r");
         out_file = $fopen(output_file, "w");

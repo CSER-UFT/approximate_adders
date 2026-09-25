@@ -27,14 +27,8 @@ module sim_herloa_16bit_uniform #(
     initial begin
         if (!$value$plusargs("INPUT=%s", input_file))
             input_file = "./data/16_uniform.txt";
-        if (!$value$plusargs("OUTPUT=%s", output_file)) begin
-            if (K == 4)
-                output_file = "./sim_output/16bit/k4/herloa_16bit_uniform.txt";
-            else if (K == 12)
-                output_file = "./sim_output/16bit/k12/herloa_16bit_uniform.txt";
-            else
-                output_file = "./sim_output/16bit/k8/herloa_16bit_uniform.txt";
-        end
+        if (!$value$plusargs("OUTPUT=%s", output_file))
+            $sformat(output_file, "./sim_output/16bit/k%0d/herloa_16bit_uniform.txt", K);
 
         in_file  = $fopen(input_file, "r");
         out_file = $fopen(output_file, "w");
