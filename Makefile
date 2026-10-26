@@ -87,6 +87,9 @@ plots:
 visual:
 	cd $(SCRIPTS_DIR)/visual_analysis && python3 generate_panels.py
 
+visual_dataset:
+	cd $(SCRIPTS_DIR)/visual_analysis && python3 dataset_metrics.py
+
 # Limpeza
 clean:
 	rm -rf $(BUILD_DIR)
@@ -95,4 +98,4 @@ clean:
 clean_all:
 	rm -rf $(BUILD_DIR) *.jou *.log .Xil
 
-.PHONY: all run parse metrics plots visual clean clean_all $(EXPERIMENTS)
+.PHONY: all run parse metrics plots visual visual_dataset clean clean_all $(EXPERIMENTS)
