@@ -24,32 +24,30 @@ module sim_rca_8bit;
 
     initial begin
         in_file  = $fopen("./data/8bit_all.txt", "r");
-        out_file = $fopen("./results/rca_8bit.txt", "w");
+        out_file = $fopen("./sim_output/8bit/k0/rca_8bit.txt", "w");
 
         if(in_file == 0) begin
             $display("Erro ao abrir arquivo de entrada: ./data/8bit_all.txt");
             $finish;
         end
         if(out_file == 0) begin
-            $display("Erro ao abrir arquivo de saída: ./results/rca_8bit.txt");
+            $display("Erro ao abrir arquivo de saída: ./sim_output/8bit/k0/rca_8bit.txt");
             $finish;
         end
 
-        $display("Simulação iniciada: ./data/8bit_all.txt -> ./results/rca_8bit.txt");
+        $display("Simulação iniciada: ./data/8bit_all.txt -> ./sim_output/8bit/k0/rca_8bit.txt");
 
         // fixa o carry-in
         cin = 0;
 
-        // Processamento Sequencial Sem Clock Rápido
         while (!$feof(in_file)) begin
-            // 1. Lê os dados do arquivo
+            // lê os operandos
             r = $fscanf(in_file, "%h %h\n", a, b);
             
             // 2. Aguarda um tempo para a lógica combinacional estabilizar
-            // 10ns é mais que suficiente para um RCA de 16 bits na Spartan-7
             #10; 
             
-            // 3. Grava a entrada E a saída resultante na mesma linha
+            // grava entradas e saída
             $fwrite(out_file, "%h %h %b %h %b\n", a, b, cin, sum, cout);
         end
 

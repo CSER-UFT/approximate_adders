@@ -1,6 +1,5 @@
 import os
 import csv
-import re
 from typing import List, Dict, Tuple
 
 
@@ -69,7 +68,7 @@ def validate_rca(filepath: str, bits: int, inputs: List[Tuple[int, int, int]], e
         if exact != circ:
             a, b, cin = inp
             raise ValueError(
-                f"FALHA DE VALIDACAO NO RCA!\n"
+                f"RCA com resultado incorreto\n"
                 f"  Arquivo:  {filepath}\n"
                 f"  Linha:    {idx}\n"
                 f"  A:        0x{a:X} ({a})\n"
@@ -83,7 +82,7 @@ def validate_rca(filepath: str, bits: int, inputs: List[Tuple[int, int, int]], e
 def validate_input_alignment(rca_file: str, approx_file: str, rca_inputs: List[Tuple[int, int, int]], approx_inputs: List[Tuple[int, int, int]]):
     if len(rca_inputs) != len(approx_inputs):
         raise ValueError(
-            f"DESALINHAMENTO DE QUANTIDADE DE AMOSTRAS!\n"
+            f"Quantidade de amostras diferente\n"
             f"  RCA ({rca_file}): {len(rca_inputs)} amostras\n"
             f"  Aproximado ({approx_file}): {len(approx_inputs)} amostras"
         )
@@ -93,7 +92,7 @@ def validate_input_alignment(rca_file: str, approx_file: str, rca_inputs: List[T
             a_r, b_r, c_r = inp_rca
             a_a, b_a, c_a = inp_app
             raise ValueError(
-                f"DESALINHAMENTO DE ENTRADAS LINHA A LINHA!\n"
+                f"Entradas diferentes entre RCA e aproximado\n"
                 f"  Linha:               {idx}\n"
                 f"  Arquivo RCA:         {rca_file} -> A=0x{a_r:X}, B=0x{b_r:X}, Cin={c_r}\n"
                 f"  Arquivo Aproximado:  {approx_file} -> A=0x{a_a:X}, B=0x{b_a:X}, Cin={c_a}"
@@ -124,7 +123,7 @@ def evaluate_all_results(
     warnings_list = []
     records = []
 
-    # 1. Somadores de 8 bits
+    # 8 bits
     rca_8bit_file = find_file("rca_8bit.txt", sim_dirs)
     rca_8bit_data = None
 
@@ -137,8 +136,7 @@ def evaluate_all_results(
         validated_rcas.add(os.path.basename(rca_8bit_file))
         processed_files.append(rca_8bit_file)
 
-    # 1. Somadores de 8 bits (Varredura de K em [2, 4, 6])
-    for k in [1, 2, 3]:
+    for k in [1, 2, 3, 4]:
         for arch in architectures:
             approx_8bit_file = None
             for sdir in sim_dirs:
@@ -182,7 +180,7 @@ def evaluate_all_results(
                 **metrics
             })
 
-    # 2. Somadores de 16 bits (Varredura de K em [4, 8, 12] x 3 Distribuicoes)
+    # 16 bits
     k_16_list = [2, 3, 4, 5, 6]
     for dist in distributions:
         rca_16_file = None
@@ -248,6 +246,7 @@ def evaluate_all_results(
                     **metrics
                 })
 
+    # 32 bits
     k_32_list = [4, 6, 8, 10]
     for dist in distributions:
         rca_32_file = None
@@ -324,42 +323,42 @@ def evaluate_all_results(
             writer.writeheader()
             writer.writerows(records)
 
-    print("1. ARQUIVOS PROCESSADOS:")
+    print("Arquivos processados:")
     for pf in sorted(processed_files):
         print(f"   - {pf}")
     print()
 
-    print("2. VALIDACAO DOS ARQUIVOS RCA (100% Exatos contra a + b + cin):")
+    print("Validacao do RCA (a + b + cin):")
     if validated_rcas:
         for vr in sorted(validated_rcas):
-            print(f"   - [OK] {vr}: validado com 0 divergencias.")
+            print(f"   - {vr}: ok")
     else:
         print("   - Nenhum arquivo RCA processado.")
     print()
 
-    print("3. ALINHAMENTO DE ENTRADAS (RCA x APROXIMADO):")
+    print("Entradas RCA x aproximado:")
     if aligned_pairs:
         for rca_p, app_p in aligned_pairs:
-            print(f"   - [OK] {rca_p} <-> {app_p}: entradas 100% alinhadas linha a linha.")
+            print(f"   - {rca_p} <-> {app_p}: ok")
     else:
         print("   - Nenhum par comparado.")
     print()
 
-    print("4. ALERTAS E AVISOS ENCONTRADOS:")
+    print("Avisos:")
     if warnings_list:
         for w in warnings_list:
             print(f"   - {w}")
     else:
-        print("   - Nenhum alerta. Todos os dados estao em perfeita conformidade.")
+        print("   - nenhum")
     print()
 
-    print("5. METRICAS FINAIS POR EXPERIMENTO:")
+    print("Metricas por experimento:")
     print(f"| {'Experimento':<24} | {'Bits':^4} | {'K':^3} | {'Distribuicao':^12} | {'MAE':^8} | {'MSE':^10} | {'EP (%)':^8} | {'MRE (%)':^10} | {'Erros':^7} | {'Total':^7} |")
     print(f"|{'-'*26}|{'-'*6}|{'-'*5}|{'-'*14}|{'-'*10}|{'-'*12}|{'-'*10}|{'-'*12}|{'-'*9}|{'-'*9}|")
     for r in records:
         print(f"| {r['experiment']:<24} | {r['bits']:^4} | {r['k_bits']:^3} | {r['distribution']:^12} | {r['MAE']:8.4f} | {r['MSE']:10.2f} | {r['EP']*100:6.2f}%  | {r['MRE']*100:8.4f}% | {r['Error Count']:^7} | {r['Total Samples']:^7} |")
     print()
-    print(f"Metricas de erro salvas com sucesso em: {output_csv}\n")
+    print(f"Metricas salvas em: {output_csv}\n")
 
 
 if __name__ == "__main__":

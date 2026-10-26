@@ -1,8 +1,11 @@
 import os
 import csv
-import re
+import locale
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from collections import defaultdict
 
 # =========================================================
@@ -12,11 +15,31 @@ from collections import defaultdict
 SUMMARY_CSV = "results/summary_main.csv"
 ERROR_CSV = "results/error_metrics_main.csv"
 PLOT_DIR = "./plots"
-os.makedirs(PLOT_DIR, exist_ok=True)
+DSE_DIR = "design_space_exploration"
+ERROR_DIR = "error_metrics"
+HARDWARE_DIR = "hardware_metrics"
+for subdir in [DSE_DIR, ERROR_DIR, HARDWARE_DIR]:
+    os.makedirs(os.path.join(PLOT_DIR, subdir), exist_ok=True)
 
-# Tipos oficiais na ordem do TCC
+# Separador decimal com virgula nos eixos
+try:
+    locale.setlocale(locale.LC_NUMERIC, "pt_BR.UTF-8")
+    plt.rcParams["axes.formatter.use_locale"] = True
+except locale.Error:
+    pass
+plt.rcParams["axes.formatter.use_mathtext"] = True
+
 TYPES = ["rca", "loa", "heaa", "hoeraa", "herloa"]
 APPROX_TYPES = ["loa", "heaa", "hoeraa", "herloa"]
+
+K_VALUES = {8: [1, 2, 3, 4], 16: [2, 3, 4, 5, 6], 32: [4, 6, 8, 10]}
+K_REF = {8: 2, 16: 4, 32: 8}
+
+# conjunto de entradas de referencia de cada largura
+REF_DIST = {8: "exhaustive", 16: "uniform", 32: "uniform"}
+DISTS = ["uniform", "normal", "exponential"]
+DIST_LABELS = ["Uniforme", "Normal", "Exponencial"]
+WIDTH_LABELS = {8: "8 bits\n(todas as entradas)", 16: "16 bits\n(uniforme)", 32: "32 bits\n(uniforme)"}
 
 ARCH_COLORS = {
     "rca":    "#1f77b4",  # Azul
@@ -25,343 +48,145 @@ ARCH_COLORS = {
     "hoeraa": "#d62728",  # Vermelho
     "herloa": "#9467bd"   # Roxo
 }
+MARKERS = {"loa": "s", "heaa": "^", "hoeraa": "D", "herloa": "v"}
+LINESTYLES = {"loa": "-", "heaa": "--", "hoeraa": "-.", "herloa": ":"}
 
 # =========================================================
-# FUNCOES DE PLOTAGEM COM LEGENDA EXTERNA E CORES FIXAS
+# LEITURA DOS DADOS
 # =========================================================
 
-def plot_bar(data_dict, types_list, metric_key, y_label, title, filename, yscale=None):
-    """
-    Gera grafico de barras com cores fixas e legenda externa a direita
-    """
-    if not data_dict:
-        print(f"Aviso: Nenhum dado para plotar {filename}")
-        return
+def load_table(path, columns):
+    # tabela[(arquitetura, bits, k, distribuicao)] = {metrica: valor}
+    table = {}
+    if not os.path.exists(path):
+        print(f"Erro: Arquivo {path} nao encontrado.")
+        return table
 
-    plt.rcParams["figure.figsize"] = (8.5, 5)
-    plt.rcParams["savefig.dpi"] = 300
-    plt.rc('axes', titlesize=16, labelsize=14)
-    plt.rc('xtick', labelsize=11)
-    plt.rc('ytick', labelsize=11)
-    plt.rc('legend', fontsize=12)
-
-    tipos = [t for t in types_list if t in data_dict]
-    bit_sizes = sorted({b for t in tipos for b in data_dict[t]})
-
-    x = np.arange(len(bit_sizes))
-    n = len(tipos)
-    width = 0.8 / n
-
-    fig, ax = plt.subplots()
-
-    for i, tipo in enumerate(tipos):
-        vals = [data_dict[tipo].get(b, {}).get(metric_key, 0) for b in bit_sizes]
-        offset = (i - n/2) * width + width/2
-        color = ARCH_COLORS.get(tipo.lower())
-        ax.bar(x + offset, vals, width=width, label=tipo.upper(), color=color)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"{b}-bit" for b in bit_sizes])
-    ax.set_ylabel(y_label)
-    ax.set_title(title)
-    if yscale:
-        ax.set_yscale(yscale)
-
-    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
-
-    filepath = os.path.join(PLOT_DIR, filename)
-    plt.savefig(filepath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Plot gerado: {filepath}")
-
-
-def plot_bar_dists(err_dict, types_list, bits, metric_key, y_label, title, filename, yscale=None):
-    """
-    Gera grafico de barras por distribuicao com cores fixas e legenda externa a direita
-    """
-    plt.rcParams["figure.figsize"] = (8.5, 5)
-    plt.rcParams["savefig.dpi"] = 300
-    plt.rc('axes', titlesize=16, labelsize=14)
-    plt.rc('xtick', labelsize=11)
-    plt.rc('ytick', labelsize=11)
-    plt.rc('legend', fontsize=12)
-
-    dists = ["uniform", "normal", "exponential"]
-    dist_labels = ["Uniform", "Normal", "Exponential"]
-    tipos = [t for t in types_list if t in err_dict]
-
-    x = np.arange(len(dists))
-    n = len(tipos)
-    width = 0.8 / n
-
-    fig, ax = plt.subplots()
-
-    for i, tipo in enumerate(tipos):
-        vals = [err_dict[tipo].get(bits, {}).get(d, {}).get(metric_key, 0) for d in dists]
-        offset = (i - n/2) * width + width/2
-        color = ARCH_COLORS.get(tipo.lower())
-        ax.bar(x + offset, vals, width=width, label=tipo.upper(), color=color)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(dist_labels)
-    ax.set_ylabel(y_label)
-    ax.set_title(title)
-    if yscale:
-        ax.set_yscale(yscale)
-
-    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
-
-    filepath = os.path.join(PLOT_DIR, filename)
-    plt.savefig(filepath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Plot gerado: {filepath}")
-
-
-# =========================================================
-# LEITURA E PROCESSAMENTO DOS DADOS DE HARDWARE
-# =========================================================
-
-def load_hardware_data():
-    data = defaultdict(lambda: defaultdict(dict))
-    power_samples = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
-    if not os.path.exists(SUMMARY_CSV):
-        print(f"Erro: Arquivo {SUMMARY_CSV} nao encontrado.")
-        return data
-
-    with open(SUMMARY_CSV, "r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
+    with open(path, "r") as f:
+        for row in csv.DictReader(f):
             arch = row["architecture"].lower()
             if arch not in TYPES:
                 continue
+            key = (arch, int(row["bits"]), int(row["k_bits"]), row["distribution"].lower())
+            table[key] = {metric: float(row[column]) * scale for metric, (column, scale) in columns.items()}
+    return table
 
-            bits = int(row["bits"])
-            lut = int(row["Slice LUTs"]) if row["Slice LUTs"] else 0
-            reg = int(row["Slice Registers"]) if row["Slice Registers"] else 0
-            dyn = float(row["Dynamic Power (W)"]) if row["Dynamic Power (W)"] else 0.0
-            sta = float(row["Static Power (W)"]) if row["Static Power (W)"] else 0.0
-            tot = float(row["Total Power (W)"]) if row["Total Power (W)"] else (dyn + sta)
 
-            canonical_k = 4 if bits == 8 else (8 if bits == 16 else 16)
-            k_bits_val = int(row.get("k_bits", canonical_k)) if row.get("k_bits") else canonical_k
+def k_of(arch, k):
+    return 0 if arch == "rca" else k
 
-            if k_bits_val == canonical_k or arch == "rca":
-                data[arch][bits]["lut"] = lut
-                data[arch][bits]["reg"] = reg
-                power_samples[arch][bits]["dynamic"].append(dyn)
-                power_samples[arch][bits]["static"].append(sta)
-                power_samples[arch][bits]["total"].append(tot)
 
-    for arch in data:
-        for bits in data[arch]:
-            dyn_mean = np.mean(power_samples[arch][bits]["dynamic"])
-            sta_mean = np.mean(power_samples[arch][bits]["static"])
-            tot_mean = np.mean(power_samples[arch][bits]["total"])
-
-            data[arch][bits]["dynamic"] = dyn_mean
-            data[arch][bits]["static"] = sta_mean
-            data[arch][bits]["total"] = tot_mean
-            data[arch][bits]["efficiency"] = tot_mean / bits if bits != 0 else 0
-
+def by_width(table):
+    # dados[arquitetura][bits], com K = N/4 e as entradas de referencia
+    data = defaultdict(dict)
+    for arch in TYPES:
+        for bits in K_REF:
+            key = (arch, bits, k_of(arch, K_REF[bits]), REF_DIST[bits])
+            if key in table:
+                data[arch][bits] = table[key]
     return data
 
 
-# =========================================================
-# LEITURA E PROCESSAMENTO DOS DADOS DE ERRO
-# =========================================================
+def by_dist(table, bits):
+    # dados[arquitetura][distribuicao], com K = N/4
+    data = defaultdict(dict)
+    for arch in TYPES:
+        for dist in DISTS:
+            key = (arch, bits, k_of(arch, K_REF[bits]), dist)
+            if key in table:
+                data[arch][dist] = table[key]
+    return data
 
-def load_error_data():
-    err_by_bit = defaultdict(lambda: defaultdict(dict))
-    err_by_dist = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
 
-    if not os.path.exists(ERROR_CSV):
-        print(f"Erro: Arquivo {ERROR_CSV} nao encontrado.")
-        return err_by_bit, err_by_dist
-
-    samples_by_bit = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
-    with open(ERROR_CSV, "r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            arch = row["architecture"].lower()
-            if arch not in TYPES:
-                continue
-
-            bits = int(row["bits"])
-            dist = row["distribution"].lower()
-
-            mae = float(row["MAE"])
-            mse = float(row["MSE"])
-            ep  = float(row["EP"]) * 100
-            mre = float(row["MRE"]) * 100
-
-            err_by_dist[arch][bits][dist] = {
-                "mae": mae,
-                "mse": mse,
-                "ep": ep,
-                "mre": mre
-            }
-
-            # Para comparativo global entre bits (8, 16, 32), usar K canônico (N/2)
-            # 8-bit -> K=4, 16-bit -> K=8, 32-bit -> K=16
-            canonical_k = 4 if bits == 8 else (8 if bits == 16 else 16)
-            k_bits_val = int(row.get("k_bits", canonical_k)) if row.get("k_bits") else canonical_k
-
-            if k_bits_val == canonical_k or arch == "rca":
-                samples_by_bit[arch][bits]["mae"].append(mae)
-                samples_by_bit[arch][bits]["mse"].append(mse)
-                samples_by_bit[arch][bits]["ep"].append(ep)
-                samples_by_bit[arch][bits]["mre"].append(mre)
-
-    for arch in samples_by_bit:
-        for bits in samples_by_bit[arch]:
-            err_by_bit[arch][bits] = {
-                "mae": np.mean(samples_by_bit[arch][bits]["mae"]),
-                "mse": np.mean(samples_by_bit[arch][bits]["mse"]),
-                "ep":  np.mean(samples_by_bit[arch][bits]["ep"]),
-                "mre": np.mean(samples_by_bit[arch][bits]["mre"])
-            }
-
-    return err_by_bit, err_by_dist
-
+def by_k(table, bits):
+    # dados[arquitetura][k], com as entradas de referencia; RCA em K=0
+    data = defaultdict(dict)
+    for arch in TYPES:
+        for k in [0] + K_VALUES[bits]:
+            key = (arch, bits, k, REF_DIST[bits])
+            if key in table:
+                data[arch][k] = table[key]
+    return data
 
 # =========================================================
-# LEITURA E PROCESSAMENTO DOS DADOS DSE (VARIAÇÃO DE K)
+# FUNCOES DE PLOTAGEM
 # =========================================================
 
-def load_dse_data(target_bits=8):
-    """
-    Carrega dados específicos de hardware e erro para um word length (8 ou 16 bits),
-    agrupando por K. Para 16 bits, calcula a média entre distribuições.
-    """
-    dse_hw = defaultdict(lambda: defaultdict(dict))
-    dse_err = defaultdict(lambda: defaultdict(dict))
-    hw_power_accum = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    err_accum = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
-    if os.path.exists(SUMMARY_CSV):
-        with open(SUMMARY_CSV, "r") as f:
-            for row in csv.DictReader(f):
-                if row.get("bits") != str(target_bits):
-                    continue
-                arch = row["architecture"].lower()
-                k = int(row["k_bits"]) if row.get("k_bits") else 0
-                lut = int(row["Slice LUTs"]) if row.get("Slice LUTs") else 0
-                dyn = float(row["Dynamic Power (W)"]) if row.get("Dynamic Power (W)") else 0.0
-                tot = float(row["Total Power (W)"]) if row.get("Total Power (W)") else 0.0
-
-                dse_hw[arch][k]["lut"] = lut
-                hw_power_accum[arch][k]["dynamic"].append(dyn)
-                hw_power_accum[arch][k]["total"].append(tot)
-
-        for arch in hw_power_accum:
-            for k in hw_power_accum[arch]:
-                dse_hw[arch][k]["dynamic"] = np.mean(hw_power_accum[arch][k]["dynamic"])
-                dse_hw[arch][k]["total"] = np.mean(hw_power_accum[arch][k]["total"])
-
-    if os.path.exists(ERROR_CSV):
-        with open(ERROR_CSV, "r") as f:
-            for row in csv.DictReader(f):
-                if row.get("bits") != str(target_bits):
-                    continue
-                arch = row["architecture"].lower()
-                k = int(row["k_bits"]) if row.get("k_bits") else 0
-                mae = float(row["MAE"])
-                mse = float(row["MSE"])
-                ep  = float(row["EP"]) * 100
-                mre = float(row["MRE"]) * 100
-
-                err_accum[arch][k]["mae"].append(mae)
-                err_accum[arch][k]["mse"].append(mse)
-                err_accum[arch][k]["ep"].append(ep)
-                err_accum[arch][k]["mre"].append(mre)
-
-        for arch in err_accum:
-            for k in err_accum[arch]:
-                dse_err[arch][k] = {
-                    "mae": np.mean(err_accum[arch][k]["mae"]),
-                    "mse": np.mean(err_accum[arch][k]["mse"]),
-                    "ep": np.mean(err_accum[arch][k]["ep"]),
-                    "mre": np.mean(err_accum[arch][k]["mre"])
-                }
-
-    return dse_hw, dse_err
-
-
-def load_dse_8bit_data():
-    return load_dse_data(8)
-
-
-def plot_dse_bars(data_dict, types_list, metric_key, y_label, title, filename_base, yscale=None):
-    """
-    Gera gráfico de barras agrupadas para o DSE
-    """
+def setup_style():
     plt.rcParams["figure.figsize"] = (8.5, 5)
     plt.rcParams["savefig.dpi"] = 300
-    plt.rc('axes', titlesize=16, labelsize=14)
-    plt.rc('xtick', labelsize=11)
-    plt.rc('ytick', labelsize=11)
-    plt.rc('legend', fontsize=12)
+    plt.rc('axes', titlesize=20, labelsize=18)
+    plt.rc('xtick', labelsize=15)
+    plt.rc('ytick', labelsize=15)
+    plt.rc('legend', fontsize=16)
 
-    tipos = [t for t in types_list if t in data_dict]
-    k_vals = sorted({k for t in tipos for k in data_dict[t]})
 
-    x = np.arange(len(k_vals))
+def log_label(label, scale):
+    if scale != "log":
+        return label
+    return f"{label[:-1]}, escala log)" if label.endswith(")") else f"{label} (escala log)"
+
+
+def save(fig, filename_base, exts):
+    for ext in exts:
+        plt.savefig(os.path.join(PLOT_DIR, f"{filename_base}{ext}"), bbox_inches='tight')
+    plt.close(fig)
+    print(f"Plot gerado: {filename_base}")
+
+
+def plot_bars(data, types_list, x_keys, x_labels, metric_key, y_label, title, filename_base,
+              yscale=None, exts=(".pdf",)):
+    setup_style()
+    tipos = [t for t in types_list if t in data]
+
+    x = np.arange(len(x_keys))
     n = len(tipos)
     width = 0.8 / n
 
     fig, ax = plt.subplots()
+    all_vals = []
 
     for i, tipo in enumerate(tipos):
-        vals = [data_dict[tipo].get(k, {}).get(metric_key, 0) for k in k_vals]
+        vals = [data[tipo].get(key, {}).get(metric_key, 0) for key in x_keys]
+        all_vals.extend(vals)
         offset = (i - n/2) * width + width/2
-        color = ARCH_COLORS.get(tipo.lower())
-        ax.bar(x + offset, vals, width=width, label=tipo.upper(), color=color)
+        ax.bar(x + offset, vals, width=width, label=tipo.upper(), color=ARCH_COLORS.get(tipo))
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"K={k}" if k > 0 else "K=0 (RCA)" for k in k_vals])
+    ax.set_xticklabels(x_labels)
+    if metric_key == "lut":
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_ylabel(y_label)
     ax.set_title(title)
-    if yscale:
+    if yscale == "log":
         ax.set_yscale(yscale)
+        # deixa folga abaixo da menor barra
+        positivos = [v for v in all_vals if v > 0]
+        if positivos:
+            ax.set_ylim(bottom=min(positivos) / 3)
 
     ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
     ax.grid(axis='y', linestyle='--', alpha=0.7)
-
-    for ext in [".pdf", ".png"]:
-        filepath = os.path.join(PLOT_DIR, f"{filename_base}{ext}")
-        plt.savefig(filepath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Plot DSE barras gerado: {filename_base} (.pdf / .png)")
+    save(fig, filename_base, exts)
 
 
-def plot_dse_lines(data_dict, types_list, metric_key, y_label, title, filename_base, yscale=None):
-    """
-    Gera gráfico de linhas/curvas de exploração com K
-    """
-    plt.rcParams["figure.figsize"] = (8.5, 5)
-    plt.rcParams["savefig.dpi"] = 300
-    plt.rc('axes', titlesize=16, labelsize=14)
-    plt.rc('xtick', labelsize=11)
-    plt.rc('ytick', labelsize=11)
-    plt.rc('legend', fontsize=12)
-
-    tipos = [t for t in types_list if t in data_dict]
-    k_vals = sorted({k for t in tipos for k in data_dict[t]})
+def plot_lines(data, bits, metric_key, y_label, title, filename_base, yscale=None):
+    setup_style()
+    k_vals = K_VALUES[bits]
+    offset_map = {"loa": -0.06, "heaa": -0.02, "hoeraa": 0.02, "herloa": 0.06}
 
     fig, ax = plt.subplots()
-    markers = {"rca": "o", "loa": "s", "heaa": "^", "hoeraa": "D", "herloa": "v"}
 
-    for tipo in tipos:
-        vals = [data_dict[tipo].get(k, {}).get(metric_key, 0) for k in k_vals]
-        color = ARCH_COLORS.get(tipo.lower())
-        ax.plot(k_vals, vals, marker=markers.get(tipo.lower(), "o"), linewidth=2.5, markersize=8, label=tipo.upper(), color=color)
+    for tipo in APPROX_TYPES:
+        vals = [data[tipo].get(k, {}).get(metric_key, 0) for k in k_vals]
+        if yscale == "log":
+            vals = [v if v > 0 else np.nan for v in vals]  # erro zero nao aparece em log
+        x_vals = [k + offset_map[tipo] for k in k_vals]
+        ax.plot(x_vals, vals, marker=MARKERS[tipo], linewidth=2.5, markersize=8, alpha=0.85,
+                label=tipo.upper(), color=ARCH_COLORS.get(tipo), linestyle=LINESTYLES[tipo])
 
     ax.set_xticks(k_vals)
-    ax.set_xticklabels([f"K={k}" if k > 0 else "K=0 (RCA)" for k in k_vals])
+    ax.set_xticklabels([f"K={k}" for k in k_vals])
     ax.set_xlabel("Número de Bits Aproximados (K)")
     ax.set_ylabel(y_label)
     ax.set_title(title)
@@ -370,161 +195,156 @@ def plot_dse_lines(data_dict, types_list, metric_key, y_label, title, filename_b
 
     ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
     ax.grid(True, linestyle='--', alpha=0.7)
-
-    for ext in [".pdf", ".png"]:
-        filepath = os.path.join(PLOT_DIR, f"{filename_base}{ext}")
-        plt.savefig(filepath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Curva DSE gerada: {filename_base} (.pdf / .png)")
+    save(fig, filename_base, (".pdf", ".png"))
 
 
-def plot_dse_tradeoff(dse_hw, dse_err, bits=8, filename_base=None):
-    """
-    Gera gráfico de dispersão do Trade-off Potência Dinâmica vs MAE (Fronteira de Pareto)
-    """
-    if filename_base is None:
-        filename_base = f"dse_{bits}bit_tradeoff_power_mae"
-
-    plt.rcParams["figure.figsize"] = (8.5, 5)
-    plt.rcParams["savefig.dpi"] = 300
-    plt.rc('axes', titlesize=16, labelsize=14)
-    plt.rc('xtick', labelsize=11)
-    plt.rc('ytick', labelsize=11)
-    plt.rc('legend', fontsize=12)
-
+def plot_tradeoff(hw, err, bits, title, filename_base, xscale=None):
+    setup_style()
     fig, ax = plt.subplots()
-    markers = {"rca": "o", "loa": "s", "heaa": "^", "hoeraa": "D", "herloa": "v"}
 
     for tipo in APPROX_TYPES:
-        color = ARCH_COLORS.get(tipo.lower())
-        m = markers.get(tipo.lower(), "o")
-        k_vals = sorted(dse_err[tipo].keys())
-        p_vals = [dse_hw[tipo].get(k, {}).get("dynamic", 0.0) * 1000 for k in k_vals]  # mW
-        mae_vals = [dse_err[tipo].get(k, {}).get("mae", 0.0) for k in k_vals]
+        k_vals = K_VALUES[bits]
+        p_vals = [hw[tipo].get(k, {}).get("dynamic", 0) for k in k_vals]
+        mae_vals = [err[tipo].get(k, {}).get("mae", 0) for k in k_vals]
+        pts = [(x, y) for x, y in zip(mae_vals, p_vals) if xscale != "log" or x > 0]
+        if not pts:
+            continue
 
-        ax.plot(mae_vals, p_vals, marker=m, linewidth=2, markersize=8, label=tipo.upper(), color=color)
+        xs, ys = zip(*pts)
+        ax.plot(xs, ys, marker=MARKERS[tipo], linewidth=2.5, markersize=8, alpha=0.85,
+                label=tipo.upper(), color=ARCH_COLORS.get(tipo), linestyle=LINESTYLES[tipo])
 
-        for k, x_val, y_val in zip(k_vals, mae_vals, p_vals):
-            ax.annotate(f"K={k}", (x_val, y_val), textcoords="offset points", xytext=(5, 5), fontsize=9)
+    if xscale:
+        ax.set_xscale(xscale)
+    ax.margins(x=0.07, y=0.14)
+    ax.set_xlabel(log_label("Erro Absoluto Médio (MAE, unidades)", xscale))
+    ax.set_ylabel("Potência Dinâmica (mW)")
+    ax.set_title(title)
 
-    ax.set_xlabel("Mean Absolute Error (MAE)")
-    ax.set_ylabel("Dynamic Power (mW)")
-    ax.set_title(f"Trade-off: Dynamic Power vs. MAE ({bits}-bit)")
-    ax.legend(loc='upper right')
+    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
     ax.grid(True, linestyle='--', alpha=0.7)
+    save(fig, filename_base, (".pdf", ".png"))
 
-    for ext in [".pdf", ".png"]:
-        filepath = os.path.join(PLOT_DIR, f"{filename_base}{ext}")
-        plt.savefig(filepath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Trade-off DSE gerado: {filename_base} (.pdf / .png)")
+def plot_overview(table, types_list, metric_key, y_label, title, filename_base, yscale=None):
+    # todas as larguras e distribuicoes em um unico grafico, com K = N/4
+    setup_style()
+    fig, ax = plt.subplots(figsize=(13, 5))
 
+    # posicao de cada grupo no eixo x, com espaco entre as larguras
+    conds, ticks, tick_labels, centers = [], [], [], {}
+    pos = 0.0
+    for bits in sorted(K_REF):
+        dists = [REF_DIST[bits]] if bits == 8 else DISTS
+        labels = ["Todas as\nentradas"] if bits == 8 else DIST_LABELS
+        start = pos
+        for dist, label in zip(dists, labels):
+            conds.append((bits, dist, pos))
+            ticks.append(pos)
+            tick_labels.append(label)
+            pos += 1.0
+        centers[bits] = (start + pos - 1.0) / 2
+        pos += 0.6
 
-# Aliases para retrocompatibilidade
-plot_8bit_dse_bars = plot_dse_bars
-plot_8bit_dse_lines = plot_dse_lines
-plot_8bit_tradeoff = plot_dse_tradeoff
+    n = len(types_list)
+    width = 0.16
+    for i, tipo in enumerate(types_list):
+        offset = (i - (n - 1) / 2) * width
+        xs = [p + offset for _, _, p in conds]
+        ys = [table.get((tipo, bits, k_of(tipo, K_REF[bits]), dist), {}).get(metric_key, 0) for bits, dist, _ in conds]
+        if yscale == "log":
+            ax.plot(xs, ys, linestyle="none", marker=MARKERS[tipo], markersize=8, alpha=0.85,
+                    color=ARCH_COLORS.get(tipo), label=tipo.upper())
+        else:
+            ax.bar(xs, ys, width=width, color=ARCH_COLORS.get(tipo), label=tipo.upper())
 
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(tick_labels)
+    for bits, center in centers.items():
+        ax.text(center, -0.17, f"{bits} bits", transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=17)
+    for left, right in zip(sorted(centers)[:-1], sorted(centers)[1:]):
+        last_left = max(p for b, _, p in conds if b == left)
+        first_right = min(p for b, _, p in conds if b == right)
+        ax.axvline((last_left + first_right) / 2, color="gray", linewidth=1, alpha=0.6)
+    ax.set_xlim(ticks[0] - 0.6, ticks[-1] + 0.6)
+
+    if yscale:
+        ax.set_yscale(yscale)
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
+
+    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    save(fig, filename_base, (".pdf",))
 
 # =========================================================
 # EXECUCAO PRINCIPAL
 # =========================================================
 
 def main():
-    print("Regenerando graficos com cores estritamente padronizadas por somador...")
+    # potencia em mW; probabilidade de erro e MRE em %
+    hw = load_table(SUMMARY_CSV, {"lut": ("Slice LUTs", 1), "dynamic": ("Dynamic Power (W)", 1000)})
+    err = load_table(ERROR_CSV, {"mae": ("MAE", 1), "mse": ("MSE", 1), "ep": ("EP", 100), "mre": ("MRE", 100)})
+    if not hw or not err:
+        return
 
-    hw_data = load_hardware_data()
-    err_by_bit, err_by_dist = load_error_data()
-    dse_hw_8, dse_err_8 = load_dse_data(8)
-    dse_hw_16, dse_err_16 = load_dse_data(16)
+    # Comparacao entre larguras (K = N/4)
+    widths = sorted(K_REF)
+    width_labels = [WIDTH_LABELS[b] for b in widths]
+    hw_width, err_width = by_width(hw), by_width(err)
+    plot_bars(hw_width, TYPES, widths, width_labels, "dynamic", "Potência Dinâmica (mW)",
+              "Comparação de Potência Dinâmica (K = N/4)", f"{HARDWARE_DIR}/power_dynamic")
+    plot_bars(hw_width, TYPES, widths, width_labels, "lut", "Uso de LUTs",
+              "Comparação de Uso de LUTs (K = N/4)", f"{HARDWARE_DIR}/lut_comparison")
+    plot_bars(err_width, APPROX_TYPES, widths, width_labels, "mae", "MAE (unidades, escala log)",
+              "Comparação de MAE (K = N/4)", f"{ERROR_DIR}/mae_comparison", yscale="log")
+    plot_bars(err_width, APPROX_TYPES, widths, width_labels, "mre", "MRE (%, escala log)",
+              "Comparação de MRE (K = N/4)", f"{ERROR_DIR}/mre_comparison", yscale="log")
 
-    # 1. Graficos de Hardware Macro (8 vs 16 vs 32 bits, com K canônico N/2)
-    if hw_data:
-        plot_bar(hw_data, TYPES, "total", "Power (W)", "Total Power Comparison", "power_total.pdf")
-        plot_bar(hw_data, TYPES, "dynamic", "Power (W)", "Dynamic Power Comparison", "power_dynamic.pdf")
-        plot_bar(hw_data, TYPES, "static", "Power (W)", "Static Power Comparison", "power_static.pdf")
-        plot_bar(hw_data, TYPES, "lut", "Slice LUTs", "LUT Usage Comparison", "lut_comparison.pdf")
-        plot_bar(hw_data, TYPES, "reg", "Slice Registers", "Register Usage Comparison", "register_comparison.pdf")
-        plot_bar(hw_data, TYPES, "efficiency", "Power per bit (W/bit)", "Energy Efficiency", "efficiency.pdf")
+    # Efeito da distribuicao das entradas (16 e 32 bits, K = N/4)
+    for bits in [16, 32]:
+        cond = f"({bits} bits, K={K_REF[bits]})"
+        plot_bars(by_dist(hw, bits), TYPES, DISTS, DIST_LABELS, "dynamic", "Potência Dinâmica (mW)",
+                  f"Potência Dinâmica por Distribuição {cond}", f"{HARDWARE_DIR}/power_dynamic_{bits}bit_dist")
+        plot_bars(by_dist(err, bits), APPROX_TYPES, DISTS, DIST_LABELS, "mre", "MRE (%)",
+                  f"MRE por Distribuição {cond}", f"{ERROR_DIR}/mre_{bits}bit_dist")
 
-    # 2. Graficos Globais de Metricas de Erro (LOA, HEAA, HOERAA, HERLOA com K canônico N/2)
-    if err_by_bit:
-        plot_bar(err_by_bit, APPROX_TYPES, "mae", "MAE", "Mean Absolute Error Comparison", "mae_comparison.pdf", yscale="log")
-        plot_bar(err_by_bit, APPROX_TYPES, "mse", "MSE", "Mean Squared Error Comparison", "mse_comparison.pdf", yscale="log")
-        plot_bar(err_by_bit, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability Comparison", "ep_comparison.pdf")
-        plot_bar(err_by_bit, APPROX_TYPES, "mre", "MRE (%)", "Mean Relative Error Comparison", "mre_comparison.pdf")
+    # Visao geral por largura e distribuicao (K = N/4)
+    plot_overview(hw, TYPES, "dynamic", "Potência Dinâmica (mW)",
+                  "Potência Dinâmica por Largura e Distribuição (K = N/4)", f"{HARDWARE_DIR}/power_dynamic_overview")
+    plot_overview(err, APPROX_TYPES, "mre", "MRE (%, escala log)",
+                  "MRE por Largura e Distribuição (K = N/4)", f"{ERROR_DIR}/mre_overview", yscale="log")
 
-    # 3. Graficos de Erro por Distribuicao (16 e 32 bits)
-    if err_by_dist:
-        for b in [16, 32]:
-            plot_bar_dists(err_by_dist, APPROX_TYPES, b, "mae", "MAE", f"MAE Comparison by Distribution ({b}-bit)", f"mae_{b}bit_dist.pdf")
-            plot_bar_dists(err_by_dist, APPROX_TYPES, b, "mse", "MSE", f"MSE Comparison by Distribution ({b}-bit)", f"mse_{b}bit_dist.pdf", yscale="log")
-            plot_bar_dists(err_by_dist, APPROX_TYPES, b, "ep", "Error Probability (%)", f"Error Probability by Distribution ({b}-bit)", f"ep_{b}bit_dist.pdf")
+    # Variacao de K em cada largura
+    mae_scale = {8: None, 16: None, 32: "log"}
+    mse_scale = {8: None, 16: "log", 32: "log"}
+    mre_scale = {8: None, 16: "log", 32: "log"}
+    tradeoff_scale = {8: None, 16: "log", 32: "log"}
 
-    # 4. Graficos Dedicados de DSE de 8 Bits (Variação de K: 2, 4, 6)
-    if dse_err_8:
-        print("\n--- Gerando suite DSE para 8-bit (K=1, 2, 3) ---")
-        plot_dse_bars(dse_err_8, APPROX_TYPES, "mae", "MAE", "MAE vs. K (8-bit Adders)", "dse_8bit_mae")
-        plot_dse_bars(dse_err_8, APPROX_TYPES, "mse", "MSE", "MSE vs. K (8-bit Adders)", "dse_8bit_mse", yscale="log")
-        plot_dse_bars(dse_err_8, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability vs. K (8-bit)", "dse_8bit_ep")
-        plot_dse_bars(dse_err_8, APPROX_TYPES, "mre", "MRE (%)", "Mean Relative Error vs. K (8-bit)", "dse_8bit_mre")
+    for bits in widths:
+        cond = f"({bits} bits)" if bits == 8 else f"({bits} bits, uniforme)"
+        hw_k, err_k = by_k(hw, bits), by_k(err, bits)
+        k_keys = [0] + K_VALUES[bits]
+        k_labels = ["K=0 (RCA)"] + [f"K={k}" for k in K_VALUES[bits]]
+        base = f"{DSE_DIR}/dse_{bits}bit"
 
-        plot_dse_lines(dse_err_8, APPROX_TYPES, "mae", "MAE", "MAE Progression with K (8-bit)", "dse_8bit_mae_curve")
-        plot_dse_lines(dse_err_8, APPROX_TYPES, "mse", "MSE (log scale)", "MSE Progression with K (8-bit)", "dse_8bit_mse_curve", yscale="log")
-        plot_dse_lines(dse_err_8, APPROX_TYPES, "ep", "Error Probability (%)", "EP Progression with K (8-bit)", "dse_8bit_ep_curve")
+        plot_lines(err_k, bits, "mae", log_label("MAE (unidades)", mae_scale[bits]),
+                   f"MAE vs. K {cond}", f"{base}_mae_curve", yscale=mae_scale[bits])
+        plot_lines(err_k, bits, "mse", log_label("MSE (unidades²)", mse_scale[bits]),
+                   f"MSE vs. K {cond}", f"{base}_mse_curve", yscale=mse_scale[bits])
+        plot_lines(err_k, bits, "ep", "Probabilidade de Erro (%)",
+                   f"Probabilidade de Erro vs. K {cond}", f"{base}_ep_curve")
+        plot_lines(err_k, bits, "mre", log_label("MRE (%)", mre_scale[bits]),
+                   f"MRE vs. K {cond}", f"{base}_mre_curve", yscale=mre_scale[bits])
 
-    if dse_hw_8:
-        plot_dse_bars(dse_hw_8, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (8-bit Spartan-7)", "dse_8bit_lut")
-        plot_dse_lines(dse_hw_8, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (8-bit Spartan-7)", "dse_8bit_lut_curve")
-        plot_dse_bars(dse_hw_8, TYPES, "dynamic", "Dynamic Power (W)", "Dynamic Power vs. K (8-bit)", "dse_8bit_power_dyn")
+        plot_bars(hw_k, TYPES, k_keys, k_labels, "lut", "Uso de LUTs",
+                  f"Uso de LUTs vs. K ({bits} bits)", f"{base}_lut", exts=(".pdf", ".png"))
+        plot_bars(hw_k, TYPES, k_keys, k_labels, "dynamic", "Potência Dinâmica (mW)",
+                  f"Potência Dinâmica vs. K {cond}", f"{base}_power_dyn", exts=(".pdf", ".png"))
 
-    if dse_hw_8 and dse_err_8:
-        plot_dse_tradeoff(dse_hw_8, dse_err_8, bits=8, filename_base="dse_8bit_tradeoff_power_mae")
+        plot_tradeoff(hw_k, err_k, bits, f"Potência Dinâmica vs. MAE {cond}",
+                      f"{base}_tradeoff_power_mae", xscale=tradeoff_scale[bits])
 
-    # 5. Graficos Dedicados de DSE de 16 Bits (Variação de K: 4, 8, 12 - ativado quando múltiplos K estiverem disponíveis)
-    has_16bit_dse = any(len(dse_err_16[arch]) > 1 for arch in dse_err_16)
-    if has_16bit_dse:
-        print("\n--- Gerando suite DSE para 16-bit (K=2, 3, 4, 5, 6) ---")
-        plot_dse_bars(dse_err_16, APPROX_TYPES, "mae", "MAE", "MAE vs. K (16-bit Adders)", "dse_16bit_mae")
-        plot_dse_bars(dse_err_16, APPROX_TYPES, "mse", "MSE", "MSE vs. K (16-bit Adders)", "dse_16bit_mse", yscale="log")
-        plot_dse_bars(dse_err_16, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability vs. K (16-bit)", "dse_16bit_ep")
-        plot_dse_bars(dse_err_16, APPROX_TYPES, "mre", "MRE (%)", "Mean Relative Error vs. K (16-bit)", "dse_16bit_mre")
-
-        plot_dse_lines(dse_err_16, APPROX_TYPES, "mae", "MAE", "MAE Progression with K (16-bit)", "dse_16bit_mae_curve")
-        plot_dse_lines(dse_err_16, APPROX_TYPES, "mse", "MSE (log scale)", "MSE Progression with K (16-bit)", "dse_16bit_mse_curve", yscale="log")
-        plot_dse_lines(dse_err_16, APPROX_TYPES, "ep", "Error Probability (%)", "EP Progression with K (16-bit)", "dse_16bit_ep_curve")
-
-        if dse_hw_16:
-            plot_dse_bars(dse_hw_16, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (16-bit Spartan-7)", "dse_16bit_lut")
-            plot_dse_lines(dse_hw_16, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (16-bit Spartan-7)", "dse_16bit_lut_curve")
-            plot_dse_bars(dse_hw_16, TYPES, "dynamic", "Dynamic Power (W)", "Dynamic Power vs. K (16-bit)", "dse_16bit_power_dyn")
-
-
-        if dse_hw_16 and dse_err_16:
-            plot_dse_tradeoff(dse_hw_16, dse_err_16, bits=16, filename_base="dse_16bit_tradeoff_power_mae")
-
-    dse_hw_32, dse_err_32 = load_dse_data(32)
-    if dse_err_32:
-        print("\n--- Gerando suite DSE para 32-bit (K=4, 6, 8, 10) ---")
-        plot_dse_bars(dse_err_32, APPROX_TYPES, "mae", "MAE", "MAE vs. K (32-bit Uniforme)", "dse_32bit_mae")
-        plot_dse_bars(dse_err_32, APPROX_TYPES, "mse", "MSE (log)", "MSE vs. K (32-bit Uniforme)", "dse_32bit_mse")
-        plot_dse_bars(dse_err_32, APPROX_TYPES, "ep", "Error Probability (%)", "Error Probability vs. K (32-bit)", "dse_32bit_ep")
-        plot_dse_bars(dse_err_32, APPROX_TYPES, "mre", "MRE (%)", "Mean Relative Error vs. K (32-bit)", "dse_32bit_mre")
-
-        plot_dse_lines(dse_err_32, APPROX_TYPES, "mae", "MAE", "MAE Progression with K (32-bit)", "dse_32bit_mae_curve")
-        plot_dse_lines(dse_err_32, APPROX_TYPES, "mse", "MSE (log scale)", "MSE Progression with K (32-bit)", "dse_32bit_mse_curve", yscale="log")
-        plot_dse_lines(dse_err_32, APPROX_TYPES, "ep", "Error Probability (%)", "EP Progression with K (32-bit)", "dse_32bit_ep_curve")
-
-        if dse_hw_32:
-            plot_dse_bars(dse_hw_32, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (32-bit Spartan-7)", "dse_32bit_lut")
-            plot_dse_lines(dse_hw_32, TYPES, "lut", "Slice LUTs", "LUT Usage vs. K (32-bit Spartan-7)", "dse_32bit_lut_curve")
-            plot_dse_bars(dse_hw_32, TYPES, "dynamic", "Dynamic Power (W)", "Dynamic Power vs. K (32-bit)", "dse_32bit_power_dyn")
-
-        if dse_hw_32 and dse_err_32:
-            plot_dse_tradeoff(dse_hw_32, dse_err_32, bits=32, filename_base="dse_32bit_tradeoff_power_mae")
-
-
-    print(f"\n[SUCESSO] Todos os graficos (Macro + DSE) foram salvos em: {os.path.abspath(PLOT_DIR)}")
+    print(f"Graficos salvos em: {os.path.abspath(PLOT_DIR)}")
 
 
 if __name__ == "__main__":

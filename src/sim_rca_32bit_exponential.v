@@ -28,7 +28,7 @@ module sim_rca_32bit_exponential;
         if (!$value$plusargs("INPUT=%s", input_file))
             input_file = "./data/32_exponential.txt";
         if (!$value$plusargs("OUTPUT=%s", output_file))
-            output_file = "./results/rca_32bit_exponential.txt";
+            output_file = "./sim_output/32bit/k0/rca_32bit_exponential.txt";
 
         // Abre arquivos
         in_file  = $fopen(input_file, "r");
@@ -48,16 +48,14 @@ module sim_rca_32bit_exponential;
         // fixa o carry-in
         cin = 0;
 
-        // Processamento Sequencial Sem Clock Rápido
         while (!$feof(in_file)) begin
-            // 1. Lê os dados do arquivo
+            // lê os operandos
             r = $fscanf(in_file, "%h %h\n", a, b);
             
             // 2. Aguarda um tempo para a lógica combinacional estabilizar
-            // 10ns é mais que suficiente para um RCA de 16 bits na Spartan-7
             #10; 
             
-            // 3. Grava a entrada E a saída resultante na mesma linha
+            // grava entradas e saída
             $fwrite(out_file, "%h %h %b %h %b\n", a, b, cin, sum, cout);
         end
 

@@ -162,9 +162,7 @@ def main():
                 experiments[canonical_exp]["dynamic"] = dynamic
                 experiments[canonical_exp]["static"] = static
 
-    # =========================================================
-    # Ordenação estruturada (Bits -> K -> Distribuição -> Arquitetura)
-    # =========================================================
+    # ordena por bits, K, distribuicao e arquitetura
 
     def sort_key(item):
         exp, data = item
@@ -178,9 +176,6 @@ def main():
 
     sorted_experiments = sorted(experiments.items(), key=sort_key)
 
-    # =========================================================
-    # Geração do CSV
-    # =========================================================
 
     fieldnames = [
         "experiment",
@@ -213,7 +208,7 @@ def main():
                 e.get("static", "")
             ])
 
-    print(f"CSV mestre gerado com sucesso: {OUTPUT_CSV} ({len(sorted_experiments)} experimentos)")
+    print(f"CSV gerado: {OUTPUT_CSV} ({len(sorted_experiments)} experimentos)")
 
 
 if __name__ == "__main__":

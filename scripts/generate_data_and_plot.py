@@ -1,6 +1,9 @@
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
+import locale
 
 # =========================================================
 # CONFIGURAÇÕES
@@ -8,15 +11,21 @@ import os
 
 np.random.seed(42)
 
+plt.rcParams["axes.formatter.use_mathtext"] = True
+try:
+    locale.setlocale(locale.LC_NUMERIC, "pt_BR.UTF-8")
+    plt.rcParams["axes.formatter.use_locale"] = True
+except locale.Error:
+    pass
+
 N_16 = 50_000   # tamanho da entrada 16 bits
 N_32 = 100_000  # tamanho da entrada 32 bits
 
-# probabilidade de mudança de valor entre vetores consecutivos
 CHANGE_PROB_16 = 0.5   
 CHANGE_PROB_32 = 0.5
 
 OUTPUT_DIR = "./data"
-PLOT_DIR = "./plots"
+PLOT_DIR = "./plots/error_metrics"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(PLOT_DIR, exist_ok=True)
@@ -80,9 +89,10 @@ def save_file(a, b, bits, dist_name):
 def plot_histogram(a, bits, dist_name):
     plt.figure()
     plt.hist(a, bins=100, color='skyblue', edgecolor='black')
-    plt.title(f"{dist_name.capitalize()} Distribution ({bits}-bit)")
-    plt.xlabel("Value")
-    plt.ylabel("Frequency")
+    nomes = {"uniform": "Uniforme", "normal": "Normal", "exponential": "Exponencial"}
+    plt.title(f"Distribuição {nomes.get(dist_name, dist_name)} ({bits} bits)")
+    plt.xlabel("Valor")
+    plt.ylabel("Frequência")
     plt.tight_layout()
     filename = f"{bits}bits_{dist_name}_hist.pdf"
     filepath = os.path.join(PLOT_DIR, filename)
@@ -97,7 +107,6 @@ def plot_histogram(a, bits, dist_name):
 def process_distribution(bits, dist_name, generator, N):
     a, b = generator(bits, N)
 
-    # aplica suavização temporal mais agressiva para 16 bits
     change_prob = CHANGE_PROB_16 if bits == 16 else CHANGE_PROB_32
     a = smooth_sequence(a, change_prob)
     b = smooth_sequence(b, change_prob)
